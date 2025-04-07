@@ -233,22 +233,29 @@ class SuperTwistingLR(LRScheduler):
         super().__init__(max_lr, min_lr, verbose)
         self.rho = rho
         self.loss_integral = 0.0
+        self.val_loss = None
+        
+    def update_val_loss(self, val_loss):
+        self.val_loss = val_loss
         
     def __call__(self, step: int, loss: float) -> float:
-        """
-        Calcula la tasa de aprendizaje para un paso dado usando Super Twisting
+        loss_c = loss.item()
         
-        Args:
-            step: Paso actual de entrenamiento
-            
-        Returns:
-            float: Tasa de aprendizaje para el paso actual
-        """
-        self.loss_integral += loss
+        # Si no tenemos pérdida de validación aún, usar solo la pérdida de entrenamiento
+        if self.val_loss is None:
+            s = loss_c
+        else:
+            # La superficie de deslizamiento es la diferencia entre las pérdidas
+            s = 10*loss_c + 1*self.val_loss
         
+        # Acumular la integral del error
+        self.loss_integral += s
+        
+        # Calcular el learning rate usando la ley de control Super Twisting
         v = 1.1 * self.rho * np.sign(self.loss_integral)
-        lr = 1.5 * self.rho * np.abs(loss) ** (0.5) * np.sign(loss) + v
+        lr = 1.5 * self.rho * np.abs(s) ** (0.5) * np.sign(s) + v
         
+        # Limitar el learning rate al rango especificado
         lr = max(self.min_lr, min(lr, self.max_lr))
         
         return lr

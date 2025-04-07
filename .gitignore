@@ -174,3 +174,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Results and data
+/results/*
+/cifar-10-batches-py/*
+cifar-10-python.tar.gz
